@@ -79,11 +79,11 @@ function ViewTicket() {
     { priorityLevel: 2, priorityName: 'High', keywords: ['high', 'urgent', 'important'] },
     { priorityLevel: 1, priorityName: 'Critical', keywords: ['critical', 'severe', 'emergency'] }
   ]);
-
   useEffect(() => {
     async function fetchAPI() {
       try {
         const response = await axios.get(`${process.env.REACT_APP_BASE_URL}/track/email/${id}`);
+        const repliedEmailResponse = await axios.get(`${process.env.REACT_APP_BASE_URL}/track/email/replied/${id}`);
         const emailData = response.data.email;
         const ticketData = {
           id: emailData.id,
@@ -100,7 +100,7 @@ function ViewTicket() {
           status: "Open",
           description: emailData.snippet,
           resolution: null,
-          comments: [],
+          comments: repliedEmailResponse.data.repliedEmails || [],
           createdBy: emailData.from.split(" <")[0].replace(/"/g, ''),
           lastUpdated: new Date(emailData.date).toLocaleString("en-US", {
             day: "numeric",
@@ -190,12 +190,14 @@ function ViewTicket() {
                 <tr key={index}>
                   <Td>{comment.commenter}</Td>
                   <Td>{comment.comment}</Td>
-                  <Td>{comment.date}</Td>
+                  <Td>{comment.createdAt}</Td>
                 </tr>
               ))
             ) : (
               <tr>
-                <Td colSpan="3">No comments available.</Td>
+                <Td colSpan="3">No comments available.
+                  <p>Note: Comments will only be visible if the respondent chooses to <span style={{ color: 'red' }}>"Reply All"</span></p>
+                </Td>
               </tr>
             )}
           </tbody>

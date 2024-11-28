@@ -35,9 +35,8 @@ function TicketTable() {
 	]);
 	const navigate = useNavigate();
 	const handleViewTicket = (e, ticketData) => {
-		navigate(`/details/${ticketData.complaint_id}`);
+		navigate(`/details/${ticketData.thread_id}`);
 	};
-
 
 	const determinePriority = (snippet) => {
 		for (const level of priorityLevels) {
@@ -59,6 +58,7 @@ function TicketTable() {
 					const ticket = {
 						id: email.id,
 						complaint_id: email.id,
+						thread_id: email.threadId,
 						complaint_subject: email.subject,
 						reporter: email.from.split(" <")[0].replace(/"/g, ''),
 						priority: determinePriority(email.snippet),

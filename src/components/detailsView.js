@@ -2,6 +2,8 @@ import React, { useEffect, useState } from "react";
 import styled from "styled-components";
 import { useParams } from "react-router-dom";
 import axios from "axios";
+import { FaEye, FaDownload } from 'react-icons/fa';
+import FileViewer from "./fileViewer";
 
 const InvoiceContainer = styled.div`
   max-width: 210mm;
@@ -73,12 +75,15 @@ function ViewTicket() {
   const { id } = useParams();
   const [ticket, setTicket] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [attachmentUrl, setAttachmentUrl] = useState('');
   const [priorityLevels, setPriorityLevels] = useState([
     { priorityLevel: 4, priorityName: 'Low', keywords: ['low', 'minor', 'routine'] },
     { priorityLevel: 3, priorityName: 'Medium', keywords: ['medium', 'moderate'] },
     { priorityLevel: 2, priorityName: 'High', keywords: ['high', 'urgent', 'important'] },
     { priorityLevel: 1, priorityName: 'Critical', keywords: ['critical', 'severe', 'emergency'] }
   ]);
+  const [previewLoading, setPreviewLoading] = useState(true);
   useEffect(() => {
     async function fetchAPI() {
       try {
@@ -86,8 +91,8 @@ function ViewTicket() {
         const repliedEmailResponse = await axios.get(`${process.env.REACT_APP_BASE_URL}/track/email/replied/${id}`);
         const emailData = response.data.email;
         const ticketData = {
-          id: emailData.id,
-          complaint_id: emailData.id,
+          id: emailData.threadId,
+          complaint_id: emailData.threadId,
           priority: determinePriority(emailData.snippet),
           assignee: "Arun Singh",
           creationDate: new Date(emailData.date).toLocaleString("en-US", {
@@ -101,6 +106,7 @@ function ViewTicket() {
           description: emailData.snippet,
           resolution: null,
           comments: repliedEmailResponse.data.repliedEmails || [],
+          attachments: emailData.body?.attachments || [],
           createdBy: emailData.from.split(" <")[0].replace(/"/g, ''),
           lastUpdated: new Date(emailData.date).toLocaleString("en-US", {
             day: "numeric",
@@ -127,6 +133,19 @@ function ViewTicket() {
     }
     return 'Low';
   };
+
+  const handleViewAttachment = async (ticketId, attachmentUrl, attachmentName) => {
+    const url = `${process.env.REACT_APP_BASE_URL}/track/email/attachments/${ticketId}/${attachmentUrl}/${attachmentName}`;
+    setAttachmentUrl(url);
+    setIsModalOpen(true);
+    setPreviewLoading(true);
+  };
+
+  const closeModal = () => {
+    setIsModalOpen(false);
+    setPreviewLoading(false);
+  };
+
   if (!ticket) {
     return <p>Loading ticket details...</p>;
   }
@@ -175,27 +194,116 @@ function ViewTicket() {
       </TableContainer>
 
       <TableContainer>
+        <h3>Attachments</h3>
+        <Table>
+          <thead>
+            <tr>
+              <Th>S.No</Th>
+              <Th>Attachment Name</Th>
+              <Th>Actions</Th>
+            </tr>
+          </thead>
+          <tbody>
+            {ticket && ticket?.attachments?.length > 0 ? (
+              ticket.attachments.map((attachment, index) => (
+                <tr key={index}>
+                  <Td>{index + 1}</Td>
+                  <Td>{attachment.name}</Td>
+                  <Td>
+                    <a
+                      href="#"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        handleViewAttachment(ticket.id, attachment.url, attachment.name);
+                      }}
+                      style={{ marginRight: '10px' }}
+                      title="View Attachment"
+                    >
+                      <FaEye />
+                    </a>
+                    <a
+                      href={`${process.env.REACT_APP_BASE_URL}/track/email/attachments/${ticket.id}/${attachment.url}/${attachment.name}?action=download`}
+                      download={`Attachment_${index + 1}`}
+                      style={{ marginLeft: '7px' }}
+                      title="Download Attachment"
+                    >
+                      <FaDownload />
+                    </a>
+                  </Td>
+                </tr>
+              ))
+            ) : (
+              <tr>
+                <Td colSpan="3">No attachments available.
+                </Td>
+              </tr>
+            )}
+          </tbody>
+        </Table>
+      </TableContainer>
+
+      <TableContainer>
         <h3>Comments</h3>
         <Table>
           <thead>
             <tr>
+              <Th>S.No</Th>
               <Th>Commenter</Th>
               <Th>Comment</Th>
               <Th>Date</Th>
+              <Th>Actions</Th>
             </tr>
           </thead>
           <tbody>
             {ticket && ticket?.comments?.length > 0 ? (
               ticket.comments.map((comment, index) => (
                 <tr key={index}>
+                  <Td>{index + 1}</Td>
                   <Td>{comment.commenter}</Td>
                   <Td>{comment.comment}</Td>
                   <Td>{comment.createdAt}</Td>
+                  <Td>
+                    {comment.attachments && comment.attachments.attachments.length > 0 ? (
+                      <table style={{ width: '100%' }}>
+                        <tbody>
+                          {comment.attachments.attachments.map((attachment, attachIndex) => (
+                            <tr key={attachIndex}>
+                              <td>{attachment.name}</td>
+                              <td>
+                                <div style={{ display: 'flex', gap: '5px' }}>
+                                  <a
+                                    href="#"
+                                    onClick={(e) => {
+                                      e.preventDefault();
+                                      handleViewAttachment(ticket.id, attachment.url, attachment.name);
+                                    }}
+                                    title="View Attachment"
+                                    style={{ marginRight: '10px' }}
+                                  >
+                                    <FaEye />
+                                  </a>
+                                  <a
+                                    href={`${process.env.REACT_APP_BASE_URL}/track/email/attachments/${ticket.id}/${attachment.url}/${attachment.name}?action=download`}
+                                    download={`Attachment_${attachIndex + 1}`}
+                                    title="Download Attachment"
+                                  >
+                                    <FaDownload />
+                                  </a>
+                                </div>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    ) : (
+                      <span>No attachments</span>
+                    )}
+                  </Td>
                 </tr>
               ))
             ) : (
               <tr>
-                <Td colSpan="3">No comments available.
+                <Td colSpan="5">No comments available.
                   <p>Note: Comments will only be visible if the respondent chooses to <span style={{ color: 'red' }}>"Reply All"</span></p>
                 </Td>
               </tr>
@@ -203,6 +311,14 @@ function ViewTicket() {
           </tbody>
         </Table>
       </TableContainer>
+
+      <FileViewer
+        isOpen={isModalOpen}
+        onClose={closeModal}
+        url={attachmentUrl}
+        previewLoading={previewLoading}
+        setPreviewLoading={setPreviewLoading}
+      />
 
       <FooterContainer>
         <div>

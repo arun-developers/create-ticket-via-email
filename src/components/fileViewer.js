@@ -7,6 +7,13 @@ const FileViewer = ({ isOpen, onClose, url, previewLoading, setPreviewLoading })
 		setPreviewLoading(false);
 	};
 
+	const getFileType = (fileUrl) => {
+		const extension = fileUrl.split('.').pop().toLowerCase();
+		return extension === 'pdf' ? 'pdf' : 'image';
+	};
+
+	const fileType = getFileType(url);
+
 	return (
 		<div className="modal-overlay" onClick={onClose}>
 			<div className="modal-content" onClick={(e) => e.stopPropagation()}>
@@ -17,16 +24,28 @@ const FileViewer = ({ isOpen, onClose, url, previewLoading, setPreviewLoading })
 						<p className="loading-text">Preparing your preview, just a moment...</p>
 					</div>
 				)}
-				<img
-					src={url}
-					style={{ width: '100%', height: '80vh', objectFit: 'contain',display: previewLoading ? 'none' : 'block', }}
-					frameBorder="0"
-					title="Attachment Preview"
-					onLoad={() => {
-						handleLoad();
-					}}		
-					onError={() => console.error('Failed to load iframe')}
-				/>
+				{fileType === 'image' ? (
+					<img
+						src={url}
+						style={{ width: '100%', height: '80vh', objectFit: 'contain', display: previewLoading ? 'none' : 'block', }}
+						frameBorder="0"
+						title="Attachment Preview"
+						onLoad={() => {
+							handleLoad();
+						}}
+						onError={() => console.error('Failed to load iframe')}
+					/>) : (
+					<iframe
+						src={url}
+						style={{ width: '100%', height: '80vh', objectFit: 'contain', display: previewLoading ? 'none' : 'block', }}
+						frameBorder="0"
+						title="Attachment Preview"
+						onLoad={() => {
+							handleLoad();
+						}}
+						onError={() => console.error('Failed to load iframe')}
+					/>
+				)}
 			</div>
 		</div>
 	);
